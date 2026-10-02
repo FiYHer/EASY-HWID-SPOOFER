@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ 生成的包含文件。
-// 供 hwid_spoofer_gui.rc 使用
+// Microsoft Visual C++ generated include file.
+// Used by hwid_spoofer_gui.rc
 //
 #define IDD_DIALOG1                     101
 #define IDI_ICON1                       103
@@ -38,6 +38,26 @@
 #define IDC_EDIT15                      1034
 #define IDC_EDIT16                      1035
 #define IDC_EDIT17                      1036
+#define IDC_BUTTON_LANG                 1037
+#define IDC_GRP_DISK                    1038
+#define IDC_GRP_BIOS                    1039
+#define IDC_GRP_GPU                     1040
+#define IDC_GRP_NIC                     1041
+#define IDC_LBL_DISK_SERIAL             1042
+#define IDC_LBL_DISK_NAME               1043
+#define IDC_LBL_DISK_FW                 1044
+#define IDC_LBL_HOOKFREE_SERIAL         1045
+#define IDC_LBL_VENDOR                  1046
+#define IDC_LBL_VERSION                 1047
+#define IDC_LBL_DATE                    1048
+#define IDC_LBL_MANUFACTURER            1049
+#define IDC_LBL_PRODUCT                 1050
+#define IDC_LBL_BIOS_SERIAL             1051
+#define IDC_LBL_GPU_SERIAL              1052
+#define IDC_LBL_GPU_NAME                1053
+#define IDC_LBL_GPU_MEM                 1054
+#define IDC_LBL_PERM_MAC                1055
+#define IDC_LBL_CUR_MAC                 1056
 
 // Next default values for new objects
 // 
@@ -45,7 +65,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        104
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1037
+#define _APS_NEXT_CONTROL_VALUE         1057
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

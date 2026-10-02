@@ -1,6 +1,7 @@
-#include "disk.h"
+ï»¿#include "disk.h"
 #include "loader.hpp"
 #include "resource.h"
+#include "lang.h"
 
 #include <time.h>
 #include <windowsx.h>
@@ -60,7 +61,7 @@ struct common_buffer
 	};
 };
 
-// ¿ªÆôWin32ÊÓ¾õÐ§¹û
+// Enable Win32 visual styles
 #pragma comment(linker,"\"/manifestdependency:type='win32' \
 name = 'Microsoft.Windows.Common-Controls' \
 version = '6.0.0.0' \
@@ -69,9 +70,22 @@ publicKeyToken = '6595b64144ccf1df' \
 language = '*'\"")
 
 const wchar_t* drv_name = L"NSpoofer";
+
+// Localized message box. detail (optional) is appended to the text.
+int Msg(HWND hWnd, Str text, UINT flags, const char* detail = nullptr)
+{
+	std::wstring body = T(text);
+	if (detail && *detail)
+	{
+		body += L"\n";
+		body += std::wstring(detail, detail + strlen(detail));
+	}
+	bool is_error = (flags & MB_ICONMASK) == MB_ICONERROR;
+	return MessageBoxW(hWnd, body.c_str(), T(is_error ? S_ERROR : S_NOTICE), flags);
+}
 HANDLE g_Driver = INVALID_HANDLE_VALUE;
 
-// Ó²ÅÌ³õÊ¼»¯
+// Disk init
 VOID DiskInitialize(HWND h)
 {
 	std::map<char, unsigned long> drivers = get_disk_all_drive_serial();
@@ -83,7 +97,7 @@ VOID DiskInitialize(HWND h)
 	}
 }
 
-// ÏÔ¿¨³õÊ¼»¯
+// GPU init
 VOID GpuInitialize(HWND h)
 {
 	FILE *file = 0;
@@ -103,7 +117,7 @@ VOID GpuInitialize(HWND h)
 	}
 }
 
-// Ó²ÅÌµÄCommand
+// Disk commands
 VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int wmId = LOWORD(wParam);
@@ -117,7 +131,7 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		ComboBox_GetText(GetDlgItem(hWnd, IDC_COMBO1), buffer, 50);
 		if (strlen(buffer) == 0)
 		{
-			MessageBoxA(hWnd, "Î´Ñ¡Ôñ¾í±ê", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_NO_VOLUME, MB_OK | MB_ICONERROR);
 			return;
 		}
 
@@ -125,14 +139,14 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		GetWindowTextA(GetDlgItem(hWnd, IDC_EDIT1), serial, 50);
 		if (strlen(serial) == 0)
 		{
-			MessageBoxA(hWnd, "ÇëÊäÈëÐÂÐòÁÐºÅ", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_NEED_SERIAL, MB_OK | MB_ICONERROR);
 			return;
 		}
 
 		if (change_serial_number(buffer[0], atoi(serial)))
-			MessageBoxA(hWnd, "¾í±êÐòÁÐºÅÐÞ¸Ä³É¹¦", serial, MB_OK);
+			Msg(hWnd, S_SERIAL_OK, MB_OK, serial);
 		else
-			MessageBoxA(hWnd, "¾í±êÐòÁÐºÅÐÞ¸ÄÊ§°Ü", buffer, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_SERIAL_FAIL, MB_OK | MB_ICONERROR, buffer);
 	}
 	break;
 	case IDC_BUTTON2:
@@ -142,9 +156,9 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		for (const auto& it : drivers)
 		{
 			if (change_serial_number(it.first, rand() * rand()))
-				MessageBoxA(hWnd, "¾í±êÐòÁÐºÅÐÞ¸Ä³É¹¦", "ÎÂÜ°ÌáÊ¾", MB_OK);
+				Msg(hWnd, S_SERIAL_OK, MB_OK | MB_ICONINFORMATION);
 			else
-				MessageBoxA(hWnd, "¾í±êÐòÁÐºÅÐÞ¸ÄÊ§°Ü", 0, MB_OK | MB_ICONERROR);
+				Msg(hWnd, S_SERIAL_FAIL, MB_OK | MB_ICONERROR);
 		}
 	}
 	break;
@@ -152,7 +166,7 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		if (g_Driver == INVALID_HANDLE_VALUE)
 		{
-			MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 			return;
 		}
 
@@ -165,7 +179,7 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		if (g_Driver == INVALID_HANDLE_VALUE)
 		{
-			MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 			return;
 		}
 
@@ -173,7 +187,7 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		GetWindowTextA(GetDlgItem(hWnd, IDC_EDIT3), buffer, 100);
 		if (strlen(buffer) == 0)
 		{
-			MessageBoxA(hWnd, "ÇëÊäÈëÓ²ÅÌÐÂÐòÁÐºÅ", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_NEED_DISK_SERIAL, MB_OK | MB_ICONERROR);
 			return;
 		}
 
@@ -209,7 +223,7 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_Driver == INVALID_HANDLE_VALUE)
 			{
-				MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+				Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 				SendMessageA(GetDlgItem(hWnd, IDC_CHECK1), BM_SETCHECK, 0, 0);
 				return;
 			}
@@ -222,7 +236,7 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			GetWindowTextA(GetDlgItem(hWnd, IDC_EDIT6), disk_product_revision_buffer, 100);
 			if (strlen(serial_buffer) == 0 || strlen(disk_product_buffer) == 0 || strlen(disk_product_revision_buffer) == 0)
 			{
-				MessageBoxA(hWnd, "ÇëÊäÈëÍêÕûÓ²ÅÌÐÂÖµ", 0, MB_OK | MB_ICONERROR);
+				Msg(hWnd, S_NEED_DISK_VALUES, MB_OK | MB_ICONERROR);
 				SendMessageA(GetDlgItem(hWnd, IDC_CHECK1), BM_SETCHECK, 0, 0);
 				return;
 			}
@@ -245,7 +259,7 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_Driver == INVALID_HANDLE_VALUE)
 			{
-				MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+				Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 				SendMessageA(GetDlgItem(hWnd, IDC_CHECK2), BM_SETCHECK, 0, 0);
 				return;
 			}
@@ -265,7 +279,7 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_Driver == INVALID_HANDLE_VALUE)
 			{
-				MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+				Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 				SendMessageA(GetDlgItem(hWnd, IDC_CHECK3), BM_SETCHECK, 0, 0);
 				return;
 			}
@@ -285,7 +299,7 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_Driver == INVALID_HANDLE_VALUE)
 			{
-				MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+				Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 				return;
 			}
 
@@ -300,7 +314,7 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_Driver == INVALID_HANDLE_VALUE)
 			{
-				MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+				Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 				return;
 			}
 
@@ -315,7 +329,7 @@ VOID DiskCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	}
 }
 
-// Çý¶¯µÄCommand
+// Driver commands
 VOID DriverCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int wmId = LOWORD(wParam);
@@ -327,40 +341,41 @@ VOID DriverCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		if (g_Driver != INVALID_HANDLE_VALUE)
 		{
-			MessageBoxA(hWnd, "²»ÔÊÐíÖØ¸´¼ÓÔØÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_DRIVER_LOADED_ALREADY, MB_OK | MB_ICONERROR);
 			return;
 		}
 
 		OPENFILENAMEW ofn = { 0 };
-		WCHAR strFilename[MAX_PATH] = { 0 };//ÓÃÓÚ½ÓÊÕÎÄ¼þÃû
-		ofn.lStructSize = sizeof(OPENFILENAMEW);//½á¹¹Ìå´óÐ¡
-		ofn.hwndOwner = NULL;//ÓµÓÐ×Å´°¿Ú¾ä±ú£¬ÎªNULL±íÊ¾¶Ô»°¿òÊÇ·ÇÄ£Ì¬µÄ£¬Êµ¼ÊÓ¦ÓÃÖÐÒ»°ã¶¼ÒªÓÐÕâ¸ö¾ä±ú
-		ofn.lpstrFilter = L"SYSÎÄ¼þ\0*.sys\0\0";//ÉèÖÃ¹ýÂË
-		ofn.nFilterIndex = 1;//¹ýÂËÆ÷Ë÷Òý
-		ofn.lpstrFile = strFilename;//½ÓÊÕ·µ»ØµÄÎÄ¼þÃû£¬×¢ÒâµÚÒ»¸ö×Ö·ûÐèÒªÎªNULL
-		ofn.nMaxFile = sizeof(strFilename);//»º³åÇø³¤¶È
-		ofn.lpstrInitialDir = NULL;//³õÊ¼Ä¿Â¼ÎªÄ¬ÈÏ
-		ofn.lpstrTitle = L"ÇëÑ¡ÔñÒ»¸öÎÄ¼þ";//Ê¹ÓÃÏµÍ³Ä¬ÈÏ±êÌâÁô¿Õ¼´¿É
-		ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY;//ÎÄ¼þ¡¢Ä¿Â¼±ØÐë´æÔÚ£¬Òþ²ØÖ»¶ÁÑ¡Ïî
+		WCHAR strFilename[MAX_PATH] = { 0 };
+		ofn.lStructSize = sizeof(OPENFILENAMEW);
+		ofn.hwndOwner = hWnd;
+		std::wstring filter = std::wstring(T(S_SYS_FILTER)) + std::wstring(1, 0) + L"*.sys" + std::wstring(1, 0);
+		ofn.lpstrFilter = filter.c_str();
+		ofn.nFilterIndex = 1;
+		ofn.lpstrFile = strFilename;
+		ofn.nMaxFile = MAX_PATH;
+		ofn.lpstrInitialDir = NULL;
+		ofn.lpstrTitle = T(S_PICK_FILE);
+		ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY;
 		if (GetOpenFileNameW(&ofn) == FALSE)
 		{
-			MessageBoxA(hWnd, "Ã»ÓÐÑ¡ÔñÇý¶¯ÎÄ¼þ", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_NO_DRIVER_FILE, MB_OK | MB_ICONERROR);
 			return;
 		}
 
 		if (start_install_driver(strFilename, drv_name, true) == false)
 		{
-			MessageBoxA(hWnd, "°²×°Çý¶¯³ÌÐòÊ§°Ü", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_INSTALL_FAIL, MB_OK | MB_ICONERROR);
 			return;
 		}
 
 #define DRIVER_NAME "\\\\.\\HwidSpoofer"
 		g_Driver = CreateFileA(DRIVER_NAME, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 		if (g_Driver == INVALID_HANDLE_VALUE)
-			MessageBoxA(hWnd, "Á´½ÓÇý¶¯³ÌÐòÊ§°Ü", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_LINK_FAIL, MB_OK | MB_ICONERROR);
 		else
 		{
-			MessageBoxA(hWnd, "Á´½ÓÇý¶¯³ÌÐò³É¹¦", "ÎÂÜ°ÌáÊ¾", MB_OK);
+			Msg(hWnd, S_LINK_OK, MB_OK | MB_ICONINFORMATION);
 			EnableWindow(GetDlgItem(hWnd, IDC_BUTTON3), FALSE);
 		}
 	}
@@ -374,14 +389,14 @@ VOID DriverCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		stop_driver(drv_name);
 		unload_driver(drv_name);
 
-		MessageBoxA(hWnd, "Ð¶ÔØÇý¶¯³É¹¦", "ÎÂÜ°ÌáÊ¾", MB_OK);
+		Msg(hWnd, S_UNLOAD_OK, MB_OK | MB_ICONINFORMATION);
 		EnableWindow(GetDlgItem(hWnd, IDC_BUTTON3), TRUE);
 	}
 	break;
 	}
 }
 
-// BOISµÄCommand
+// BIOS commands
 VOID BoisCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int wmId = LOWORD(wParam);
@@ -393,7 +408,7 @@ VOID BoisCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		if (g_Driver == INVALID_HANDLE_VALUE)
 		{
-			MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 			return;
 		}
 
@@ -416,11 +431,11 @@ VOID BoisCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			|| strlen(product_name) == 0
 			|| strlen(serial_number) == 0)
 		{
-			MessageBoxA(hWnd, "ÇëÌîÐ´È«²¿BOISÐÅÏ¢", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_NEED_BIOS, MB_OK | MB_ICONERROR);
 			return;
 		}
 
-		if (MessageBoxA(hWnd, "Ö»ÄÜÐÞ¸ÄÒ»´Î,¶þ´ÎÐÞ¸Ä»áµ¼ÖÂÀ¶ÆÁ,ÊÇ·ñ¼ÌÐø?", "ÎÂÜ°ÌáÊ¾", MB_YESNO | MB_ICONQUESTION) == IDYES)
+		if (Msg(hWnd, S_BIOS_ONCE, MB_YESNO | MB_ICONQUESTION) == IDYES)
 		{
 			DWORD res = 0;
 			common_buffer common{ 0 };
@@ -437,7 +452,7 @@ VOID BoisCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	}
 }
 
-// ÏÔ¿¨µÄCommand
+// GPU commands
 VOID GpuCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int wmId = LOWORD(wParam);
@@ -449,7 +464,7 @@ VOID GpuCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		if (g_Driver == INVALID_HANDLE_VALUE)
 		{
-			MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 			return;
 		}
 
@@ -457,7 +472,7 @@ VOID GpuCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		GetWindowTextA(GetDlgItem(hWnd, IDC_EDIT4), buffer, 100);
 		if (strlen(buffer) == 0)
 		{
-			MessageBoxA(hWnd, "ÇëÊäÈëÏÔ¿¨ÐÂÐòÁÐºÅ", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_NEED_GPU_SERIAL, MB_OK | MB_ICONERROR);
 			return;
 		}
 
@@ -470,7 +485,7 @@ VOID GpuCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	}
 }
 
-// Íø¿¨µÄCommand
+// NIC commands
 VOID NicCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int wmId = LOWORD(wParam);
@@ -483,7 +498,7 @@ VOID NicCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_Driver == INVALID_HANDLE_VALUE)
 			{
-				MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+				Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 				return;
 			}
 
@@ -498,7 +513,7 @@ VOID NicCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_Driver == INVALID_HANDLE_VALUE)
 			{
-				MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+				Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 				return;
 			}
 
@@ -516,7 +531,7 @@ VOID NicCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			if (g_Driver == INVALID_HANDLE_VALUE)
 			{
-				MessageBoxA(hWnd, "Î´Á´½ÓÇý¶¯³ÌÐò", 0, MB_OK | MB_ICONERROR);
+				Msg(hWnd, S_NO_DRIVER, MB_OK | MB_ICONERROR);
 				return;
 			}
 
@@ -531,7 +546,7 @@ VOID NicCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			GetWindowTextA(GetDlgItem(hWnd, IDC_EDIT17), current_mac, 100);
 			if (strlen(permanent_mac) == 0 || strlen(current_mac) == 0)
 			{
-				MessageBoxA(hWnd, "ÇëÊäÈëÍêÕûMACµØÖ·", 0, MB_OK | MB_ICONERROR);
+				Msg(hWnd, S_NEED_MAC, MB_OK | MB_ICONERROR);
 				return;
 			}
 
@@ -546,16 +561,24 @@ VOID NicCommand(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	}
 }
 
-// ´°¿Ú¹ý³Ìº¯Êý
+// Dialog procedure
 INT_PTR CALLBACK DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
 	case WM_INITDIALOG:
+		LangDetect();
+		LangApply(hWnd);
 		DiskInitialize(hWnd);
 		GpuInitialize(hWnd);
 		return 1;
 	case WM_COMMAND:
+		if (LOWORD(wParam) == IDC_BUTTON_LANG)
+		{
+			g_lang = (g_lang == LANG_EN) ? LANG_ZH : LANG_EN;
+			LangApply(hWnd);
+			return 1;
+		}
 		DiskCommand(hWnd, uMsg, wParam, lParam);
 		DriverCommand(hWnd, uMsg, wParam, lParam);
 		BoisCommand(hWnd, uMsg, wParam, lParam);
@@ -565,7 +588,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_CLOSE:
 		if (g_Driver != INVALID_HANDLE_VALUE)
 		{
-			MessageBoxA(hWnd, "ÇëÏÈÐ¶ÔØÇý¶¯ºóÔÙ½áÊø³ÌÐò", 0, MB_OK | MB_ICONERROR);
+			Msg(hWnd, S_UNLOAD_FIRST, MB_OK | MB_ICONERROR);
 			return 0;
 		}
 		PostQuitMessage(0);
@@ -575,24 +598,24 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-// ³ÌÐòÈË¿Ú
+// Entry point
 int _stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
-	HWND h = CreateDialogParamA(hInstance, MAKEINTRESOURCEA(IDD_DIALOG1), 0, DialogProc, 0);
+	HWND h = CreateDialogParamW(hInstance, MAKEINTRESOURCEW(IDD_DIALOG1), 0, DialogProc, 0);
 	if (h)
 	{
-		// ´´½¨´°¿ÚºóÂíÉÏÏÔÊ¾ºÍ¸üÐÂ,²»È»´°¿Ú²»³öÀ´¹þ
+		// Show and update right after creation
 		ShowWindow(h, SW_SHOW);
 		UpdateWindow(h);
 
-		// ÉèÖÃÒ»ÏÂ³ÌÐòµÄÍ¼±ê
-		SendMessage(h, WM_SETICON, FALSE, (LPARAM)LoadIconA(hInstance, MAKEINTRESOURCEA(IDI_ICON1)));
+		// Set the window icon
+		SendMessageW(h, WM_SETICON, FALSE, (LPARAM)LoadIconW(hInstance, MAKEINTRESOURCEW(IDI_ICON1)));
 
 		MSG msg{ 0 };
-		while (GetMessageA(&msg, 0, 0, 0))
+		while (GetMessageW(&msg, 0, 0, 0))
 		{
 			TranslateMessage(&msg);
-			DispatchMessageA(&msg);
+			DispatchMessageW(&msg);
 		}
 	}
 
